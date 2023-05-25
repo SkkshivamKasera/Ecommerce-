@@ -9,7 +9,7 @@ const app = express()
 
 app.use(express.json())
 app.use(cookie_parser())
-// app.use(cors)
+app.use(cors())
 // app.use(body_parser)
 
 process.on("uncaughtException", (err)=>{
