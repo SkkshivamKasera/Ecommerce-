@@ -1,41 +1,49 @@
 const Users = require('../models/userModel')
+const ErrorHandler = require('../utills/errorHandler')
 const sendToken = require('../utills/jwtToken')
 const sendEmail = require('../utills/sendEmail')
 const crypto = require('crypto')
+const cloudinary = require('cloudinary')
 const success = true
 
-exports.registerUser = async (req, res) => {
+exports.registerUser = async (req, res, next) => {
     try {
-        const { name, email, password, role } = req.body
-        let user = await Users.findOne({ email })
-        if (user) { return res.send({ success: (!success), errors: "Email is already exists" }) }
+        const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+            folder: "avatars",
+            width: 150,
+            crop: "scale"
+        })
+        const { name, email, password } = req.body
+        let user = await Users.findOne({email: email})
+        if (user) { return next(new ErrorHandler("Email is already exists"))}
         user = await Users.create({
-            name, email, password, role,
+            name: name,
+            email: email,
+            password: password,
             avatar: {
-                public_id: "sampleId",
-                url: "Text"
+                public_id: myCloud.public_id,
+                url: myCloud.secure_url
             }
         })
         sendToken(user, req, res)
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
-exports.loginUser = async (req, res) => {
-    try {
+exports.loginUser = async (req, res, next) => {
+    try{
         const { email, password } = req.body
-        if (!email || !password) { return res.send({ success: (!success), errors: "Please enter email or password" }) }
+        if (!email || !password) { return next(new ErrorHandler("Please Enter Email & Password")) }
         const user = await Users.findOne({ email }).select("+password")
-        if (!user) { return res.send({ success: (!success), errors: "Not Found" }) }
+        if (!user) { 
+            return next(new ErrorHandler("Not Found"))
+        }
         const checkPassword = await user.comaparePassword(password)
-        if (!checkPassword) { return res.send({ success: (!success), errors: "Not Found" }) }
-        const token = user.getJwtToken()
+        if (!checkPassword) { return next(new ErrorHandler("Not Found")) }
         sendToken(user, req, res)
-    } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+    }catch(error){
+        return next(new ErrorHandler(error.message))
     }
 }
 
@@ -49,13 +57,13 @@ exports.logoutUser = async (req, res) => {
 
 exports.forgotPassword = async (req, res, next) => {
     const user = await Users.findOne({ email: req.body.email })
-    if (!user) { return res.send({ success: (!success), errors: "Not Found" }) }
+    if (!user) { return next(new ErrorHandler("User Not Found")) }
 
     const resetToken = await user.getResetPasswordToken()
 
     await user.save({ validateBeforeSave: false })
 
-    const resetPasswordLink = `${req.protocol}://${req.get("host")}/api/v1/password/reset/${resetToken}`
+    const resetPasswordLink = `${process.env.FRONTEND}/password/reset/${resetToken}`
 
     const message = `Your password reset link is :- \n\n${resetPasswordLink}\n\nIf you have not requested this email then, please ignore it`
 
@@ -70,17 +78,16 @@ exports.forgotPassword = async (req, res, next) => {
         user.resetPasswordToken = undefined
         user.resetPasswordExpire = undefined
         await user.save({ validateBeforeSave: false })
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
-exports.resetPassword = async (req, res) => {
+exports.resetPassword = async (req, res, next) => {
     const resetPasswordToken = crypto.createHash("sha256").update(req.params.token).digest("hex")
     const user = await Users.findOne({ resetPasswordToken, resetPasswordExpire: { $gt: Date.now() } })
-    if (!user) { return res.send({ success: (!success), errors: "Token Expire" }) }
+    if (!user) { return next(new ErrorHandler("Token Expire")) }
     if (req.body.password !== req.body.confirmPassword) {
-        return res.send({ success: (!success), errors: "Password not changable" })
+        return next(new ErrorHandler("Password not changable"))
     }
     user.password = req.body.password
     user.resetPasswordToken = undefined
@@ -91,43 +98,57 @@ exports.resetPassword = async (req, res) => {
     sendToken(user, req, res)
 }
 
-exports.getUserDetails = async (req, res) => {
+exports.getUserDetails = async (req, res, next) => {
     try {
         const user = await Users.findById(req.user.id)
-        res.send({ success: success, Details: user })
+        res.send({ success: success, user: user})
 
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
-exports.updatePassword = async (req, res) => {
+exports.updatePassword = async (req, res, next) => {
     try {
         const user = await Users.findById(req.user.id).select("+password")
         const checkPassword = await user.comaparePassword(req.body.oldPassword)
-        if (!checkPassword) { return res.send({ success: (!success), errors: "Old password is incorrect" }) }
+        if (!checkPassword) { return next(new ErrorHandler("Old password is incorrect")) }
         if (req.body.newPassword !== req.body.confirmPassword) {
-            res.send({ success: (!success), errors: "Password does not match" })
+            return next(new ErrorHandler("Password does not match"))
         }
         user.password = req.body.newPassword
         await user.save()
         sendToken(user, req, res)
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
-exports.updateProfile = async (req, res) => {
-    const newUserDate = {
+exports.updateProfile = async (req, res, next) => {
+    try{const newUserDate = {
         "name": req.body.name,
-        "email": req.body.email
+        "email": req.body.email,
     }
-
+    console.log(req.body.avatar)
+    if(req.body.avatar !== ""){
+        const find_user = await Users.findById(req.user.id)
+        const imageId = find_user.avatar.public_id
+        await cloudinary.v2.uploader.destroy(imageId)
+        const myCloud = await cloudinary.v2.uploader.upload(req.body.avatar, {
+            folder: "avatars",
+            width: 150,
+            crop: "scale"
+        })
+        newUserDate.avatar={
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url
+        }
+    }
     const user = await Users.findByIdAndUpdate(req.user.id, newUserDate, { new: true, runValidators: true })
-
-    res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉" })
+    res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉" })}
+    catch(error){
+        return next(new ErrorHandler(error.message))
+    }
 }
 
 // Get all users. ==> Only Admin
@@ -136,19 +157,17 @@ exports.getAllUser = async (req, res) => {
         const users = await Users.find()
         res.send({ success: success, users: users })
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
 exports.getSingleUser = async (req, res) => {
     try {
         const user = await Users.findById(req.params.id)
-        if (!user) { return res.send({ success: (!success), errors: "Not Found" }) }
+        if (!user) { return next(new ErrorHandler("Not Found")) }
         res.send({ success: success, user: user })
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 

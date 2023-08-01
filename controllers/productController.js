@@ -16,11 +16,25 @@ exports.createProducts = async (req, res, next) => {
 
 exports.getAllProducts = async (req, res, next) => {
     try {
-        let resultPerPage = 20
+        let resultPerPage = 8
         const productsCount = await Products.countDocuments()
         const apifeatures = new ApiFeatures(Products.find(), req.query).search().filter().pagination(resultPerPage)
+
+        // let products = await apifeatures.query
+
+        // console.log(products)
+
+        // let filterProductCount = products.length
+
+        // console.log(filterProductCount)
+
+        // apifeatures.pagination(resultPerPage)
+
         const products = await apifeatures.query
-        res.status(200).send({ success: (success), products: products, productsCount: productsCount })
+
+        // console.log(products)
+
+        res.status(200).send({ success: (success), products: products, productsCount: productsCount, resultPerPage: resultPerPage})
     } catch (error) {
         console.log(error.message)
         return res.send({ success: (!success), errors: error.message })
@@ -33,7 +47,7 @@ exports.getProductDetails = async (req, res, next) => {
         if (!product) {
             return res.send({ success: (!success), errors: "Product Not Found" })
         }
-        res.send({ success: success, product:product})
+        res.send({success: success, product:product})
     } catch (error) {
         console.log(error.message)
         return res.send({ success: (!success), errors: error.message })

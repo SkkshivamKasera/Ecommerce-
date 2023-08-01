@@ -1,7 +1,8 @@
 const Orders = require('../models/orderModel')
 const Products = require('../models/productModel')
+const ErrorHandler = require('../utills/errorHandler')
 const success = true
-exports.newOrder = async (req, res) => {
+exports.newOrder = async (req, res, next) => {
     try {
         const {
             shippingInfo,
@@ -26,31 +27,28 @@ exports.newOrder = async (req, res) => {
         })
         res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉", order: order })
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
-exports.getSingleOrderDetails = async (req, res) => {
+exports.getSingleOrderDetails = async (req, res,next) => {
     try {
         const order = await Orders.findById(req.params.id).populate("user", "name email")
-        if (!order) { return res.send({ success: (!success), errors: "Order Not Found" }) }
+        if (!order) { return next(new ErrorHandler("Order Not Found")) }
         res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉", order: order })
     }
     catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
-exports.myOrders = async (req, res) => {
+exports.myOrders = async (req, res, next) => {
     try {
         const order = await Orders.find({ user: req.user._id })
         res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉", order: order })
     }
     catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 // Admin

@@ -20,7 +20,7 @@ const userModel = new mongoose.Schema({
     password:{
         type: String,
         required: [true, "Please enter your password"],
-        minLength: [8, "Name should have more than 4 characters"],
+        minLength: [8, "Name should have more than 8 characters"],
         select: false
     },
     avatar:{
@@ -37,6 +37,10 @@ const userModel = new mongoose.Schema({
         type: String,
         default: "user"
     },
+    createdAt:{
+        type: Date,
+        default: Date.now
+    },
     resetPasswordToken: String,
     resetPasswordExpire: Date
 })
@@ -49,6 +53,7 @@ userModel.pre("save", async function(next){
 })
 
 userModel.methods.getJwtToken = function(){
+    console.log(process.env.SIGN)
     return jwt.sign({id:this._id}, process.env.SIGN, {
         expiresIn: process.env.SIGN_EXPIRE
     })

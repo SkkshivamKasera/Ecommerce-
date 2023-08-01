@@ -6,11 +6,11 @@ const orderSchema = new mongoose.Schema({
         city:{type: String, required: true},
         state:{type: String, required: true},
         country:{type: String, required: true},
-        pincode:{
+        phoneNo: {
             type: Number,
             required: true
         },
-        phoneNumber:{
+        pinCode: {
             type: Number,
             required: true
         }
@@ -26,7 +26,7 @@ const orderSchema = new mongoose.Schema({
                 required:true
             },
             quantity:{
-                type:String,
+                type:Number,
                 required:true
             },
             image:{

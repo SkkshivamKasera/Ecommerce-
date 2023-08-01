@@ -10,7 +10,8 @@ const sendToken = (user, req, res) => {
     res.cookie("token", token, options).json({
         success: true,
         message: "🎉🎉🎉Successfully🎉🎉🎉",
-        token
+        token,
+        user
     })
 }
 
