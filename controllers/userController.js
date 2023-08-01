@@ -27,6 +27,7 @@ exports.registerUser = async (req, res, next) => {
         })
         sendToken(user, req, res)
     } catch (error) {
+        console.error("Error during signup:", error);
         return next(new ErrorHandler(error.message))
     }
 }
@@ -101,6 +102,7 @@ exports.resetPassword = async (req, res, next) => {
 exports.getUserDetails = async (req, res, next) => {
     try {
         const user = await Users.findById(req.user.id)
+        if(!user) { return next(ErrorHandler("Please Login")) }
         res.send({ success: success, user: user})
 
     } catch (error) {
