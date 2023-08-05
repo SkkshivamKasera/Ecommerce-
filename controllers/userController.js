@@ -25,6 +25,27 @@ exports.registerUser = async (req, res, next) => {
                 url: myCloud.secure_url
             }
         })
+        await sendEmail({
+            email: user.email,
+            subject: `🎉 Welcome to [Ecommerce] - Discover Amazing Deals Inside!`,
+            message : `
+            🎉 Welcome to Our Ecommerce Store! 🎉
+                            
+            🛍️ Shop Now and Discover Amazing Deals! 🛍️
+                            
+            ✨ We're thrilled to have you as a valued customer! ✨
+                            
+            🎁 Get 10% OFF on your first purchase with code: WELCOME10 🎁
+                            
+            🌟 Happy shopping! 🌟
+                            
+            🛒 Start exploring our products ➡️ [https://helpful-pika-3213fa.netlify.app]
+                            
+            💌 If you have any questions or need assistance, feel free to contact us. We're here to help! 💌
+                            
+            👋 Thank you for choosing us! Enjoy your shopping experience! 👋
+            `
+        })
         sendToken(user, req, res)
     } catch (error) {
         console.error("Error during signup:", error);
@@ -43,6 +64,27 @@ exports.loginUser = async (req, res, next) => {
         const checkPassword = await user.comaparePassword(password)
         if (!checkPassword) { return next(new ErrorHandler("Not Found")) }
         sendToken(user, req, res)
+        await sendEmail({
+            email: user.email,
+  subject: `🎉 Welcome to [Ecommerce] - Discover Amazing Deals Inside!`,
+  message: `
+🎉 Welcome to Our Ecommerce Store! 🎉
+
+🛍️ Shop Now and Discover Amazing Deals! 🛍️
+
+✨ We're thrilled to have you as a valued customer! ✨
+
+🎁 Get 10% OFF on your first purchase with code: WELCOME10 🎁
+
+🌟 Happy shopping! 🌟
+
+🛒 Start exploring our products ➡️ [https://helpful-pika-3213fa.netlify.app]
+
+💌 If you have any questions or need assistance, feel free to contact us. We're here to help! 💌
+
+👋 Thank you for choosing us! Enjoy your shopping experience! 👋
+`
+})
     }catch(error){
         return next(new ErrorHandler(error.message))
     }
@@ -84,7 +126,7 @@ exports.forgotPassword = async (req, res, next) => {
 }
 
 exports.resetPassword = async (req, res, next) => {
-    const resetPasswordToken = crypto.createHash("sha256").update(req.params.token).digest("hex")
+    try{const resetPasswordToken = crypto.createHash("sha256").update(req.params.token).digest("hex")
     const user = await Users.findOne({ resetPasswordToken, resetPasswordExpire: { $gt: Date.now() } })
     if (!user) { return next(new ErrorHandler("Token Expire")) }
     if (req.body.password !== req.body.confirmPassword) {
@@ -96,7 +138,24 @@ exports.resetPassword = async (req, res, next) => {
 
     await user.save()
 
-    sendToken(user, req, res)
+    await sendEmail({
+        email: user.email,
+        subject: "Password Reset Successful",
+        message: `Dear [${user.name}],
+
+        We are writing to inform you that your password has been successfully reset.
+        
+        If you did not initiate this password reset, please contact our support team immediately at ${process.env.SMPT_MAIL} to secure your account.
+        
+        Thank you for using our services.
+        
+        Best regards,
+        [Ecommerce]`
+    })
+
+    sendToken(user, req, res)}catch(error){
+        return next(new ErrorHandler(error.message))
+    }
 }
 
 exports.getUserDetails = async (req, res, next) => {
@@ -173,30 +232,29 @@ exports.getSingleUser = async (req, res) => {
     }
 }
 
-exports.updateRole = async (req, res) => {
+exports.updateRole = async (req, res, next) => {
     try {
-        const newUserDate = {
+        const newUserData = {
+            "name": req.body.name,
             "email": req.body.email,
             "role": req.body.role
         }
-
-        const user = await Users.findByIdAndUpdate(req.params.id, newUserDate, { new: true, runValidators: true })
-
-        res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉" })
+        const user = await Users.findByIdAndUpdate(req.params.id, newUserData, { new: true, runValidators: true })
+        res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉", user: user })
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }
 
-exports.deleteUser = async (req, res) => {
+exports.deleteUser = async (req, res, next) => {
     try {
         const user = await Users.findById(req.params.id)
-        if (!user) { return res.send({success: (!success), errors: "User Not Found" })}
+        if (!user) { return next(new ErrorHandler("User Not Found" ))}
+        const imageId = user.avatar.public_id
+        await cloudinary.v2.uploader.destroy(imageId)
         await user.deleteOne()
         res.send({ success: success, message: "🎉🎉🎉Successfully🎉🎉🎉" })
     } catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }

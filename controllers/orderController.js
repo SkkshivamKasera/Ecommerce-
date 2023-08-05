@@ -70,6 +70,12 @@ exports.getAllOrders = async (req, res) => {
     }
 }
 
+async function updateStock(id, quantity) {
+    const product = await Products.findById(id)
+    product.stock -= quantity
+    await product.save({ validateBeforeSave: false })
+}
+
 exports.updateOrderStatus = async (req, res) => {
     try {
         const order = await Orders.findById(req.params.id)
@@ -77,9 +83,11 @@ exports.updateOrderStatus = async (req, res) => {
         if (order.orderStatus === "Delivered") {
             res.send({ message: "You have already delivered this order" })
         }
-        order.orderItems.forEach(async (order) => {
-            await updateStock(order.product, order.quantity)
-        })
+        if(req.body.status === "Shipped"){
+            order.orderItems.forEach(async (o) => {
+                await updateStock(o.product, o.quantity)
+            })
+        }
         order.orderStatus = req.body.status
         if (req.body.status === "Delivered") {
             order.deliveredAt = Date.now()
@@ -96,21 +104,14 @@ exports.updateOrderStatus = async (req, res) => {
     }
 }
 
-async function updateStock(id, quantity) {
-    const product = await Products.findById(id)
-    product.stock = quantity
-    await product.save({ validateBeforeSave: false })
-}
-
-exports.deleteOrder = async (req, res) => {
+exports.deleteOrder = async (req, res, next) => {
     try {
         const order = await Orders.findById(req.params.id)
-        if (!order) {return res.send({ success: (!success), errors: "Order Not Found" })}
+        if (!order) {return next(new ErrorHandler("Order Not Found"))}
         await order.deleteOne()
-        res.send({success: success, message: "🎉🎉🎉Successfully🎉🎉🎉"})
+        res.send({success: true, message: "🎉🎉🎉Successfully🎉🎉🎉"})
     }
     catch (error) {
-        console.log(error.message)
-        return res.send({ success: (!success), errors: error.message })
+        return next(new ErrorHandler(error.message))
     }
 }

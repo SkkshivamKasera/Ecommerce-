@@ -18,7 +18,10 @@ app.use(express.json());
 app.use(cookie_parser());
 app.use(body_parser.urlencoded({ extended: true }));
 app.use(fileUpload());
-app.use(cors());
+app.use("*", cors({
+  origin: true,
+  credentials: true
+}));
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,

@@ -53,7 +53,6 @@ userModel.pre("save", async function(next){
 })
 
 userModel.methods.getJwtToken = function(){
-    console.log(process.env.SIGN)
     return jwt.sign({id:this._id}, process.env.SIGN, {
         expiresIn: process.env.SIGN_EXPIRE
     })

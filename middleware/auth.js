@@ -3,9 +3,9 @@ const Users = require('../models/userModel')
 const ErrorHandler = require('../utills/errorHandler')
 exports.isAuthenticatedUser = async (req, res, next) => {
     try{
-        const {token} = req.cookies
+        const { token } = req.cookies
         if(!token){
-            return next(new ErrorHandler("Please Login"))
+            return next(new ErrorHandler("Token is missing"))
         }
         const decodeData = jwt.verify(token, process.env.SIGN)
         req.user = await Users.findById(decodeData.id)
@@ -17,7 +17,6 @@ exports.isAuthenticatedUser = async (req, res, next) => {
 
 exports.authorizeRoles = (...roles) => {
     return (req, res, next)=>{
-        console.log("yes")
         if(!roles.includes(req.user.role)){
             return next(new ErrorHandler(`Role: ${req.user.role} is not allowed to access this resource`))
         }
