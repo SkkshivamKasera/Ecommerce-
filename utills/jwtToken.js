@@ -1,4 +1,4 @@
-import ErrorHandler from "./errorHandler";
+const ErrorHandler = require('./errorHandler');
 
 const sendToken = (user, req, res, next) => {
     try {
