@@ -1,3 +1,5 @@
+import ErrorHandler from "./errorHandler";
+
 const sendToken = (user, req, res, next) => {
     try {
         const token = user.getJwtToken();
