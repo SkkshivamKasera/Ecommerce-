@@ -7,7 +7,7 @@ const sendToken = (user, req, res, next) => {
             Date.now() + process.env.COOKIE_EXPIRE * 24 * 60 * 60 * 1000
         ),
         httpOnly: true,
-        secure: true
+        secure: false
     }).json({
         success: true,
         message: "🎉🎉🎉Successfully🎉🎉🎉",
