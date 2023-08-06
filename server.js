@@ -18,8 +18,8 @@ app.use(express.json());
 app.use(cookie_parser());
 app.use(body_parser.urlencoded({ extended: true }));
 app.use(fileUpload());
-app.use(cors({
-  origin: "http://localhost:3000",
+app.use("*", cors({
+  origin: true,
   credentials: true
 }));
 
