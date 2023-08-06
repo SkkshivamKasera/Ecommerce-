@@ -7,11 +7,14 @@ const sendToken = (user, req, res, next) => {
         const secureFlag = req.secure || req.headers['x-forwarded-proto'] === 'https';
         
         res.cookie("token", token, {
-            expires: new Date(Date.now() + process.env.COOKIE_EXPIRE * 24 * 60 * 60 * 1000),
+            expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             httpOnly: true,
             secure: false,
             domain: ""
-        }).json({
+        })
+        console.log(token)
+
+        res.json({
             success: true,
             message: "🎉🎉🎉Successfully🎉🎉🎉",
             token,
